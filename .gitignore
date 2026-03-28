@@ -1,0 +1,55 @@
+# macOS
+.DS_Store
+
+# Python cache / build artifacts
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Local environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local secrets / overrides
+.env
+.env.*
+*.local
+
+# Downloaded proxy cores / local binaries
+bin/mihomo
+bin/mihomo.exe
+bin/clash
+bin/clash.exe
+bin/clash-meta
+bin/clash-meta.exe
+
+# Generated result files
+purity_results.json
+purity_results_ranking.json
+*_results.json
+*_results_ranking.json
+proxyinfo_test.json
+
+# Local debug / smoke files
+*.log
+*_smoke.json
+*_smoke_ranking.json

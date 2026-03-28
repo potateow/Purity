@@ -1,0 +1,302 @@
+{
+  "source": "/Users/renzhongyuan/Documents/code/purity/example.yaml",
+  "generatedAt": "2026-03-28 20:10:17",
+  "coreBinary": "/opt/homebrew/bin/mihomo",
+  "workers": 1,
+  "requestTimeoutSeconds": 3.0,
+  "startupTimeoutSeconds": 5.0,
+  "total": 16,
+  "success": 1,
+  "failed": 15,
+  "results": [
+    {
+      "name": "🪧 官网 : 性价比机场.net",
+      "type": "vmess",
+      "server": "54.250.8.120",
+      "port": 443,
+      "status": "ok",
+      "error": null,
+      "fraud_score": 27,
+      "fraud_bucket": 40,
+      "ip_info": {
+        "ip": "95.85.94.159",
+        "asn": 199524,
+        "asOrganization": "G-Core Labs Customer assignment",
+        "country": "Japan",
+        "countryCode": "JP",
+        "region": "Tokyo",
+        "regionCode": "13",
+        "city": "Monzen-nakachō",
+        "timezone": "Asia/Tokyo",
+        "longitude": "139.7917",
+        "latitude": "35.6309",
+        "postalCode": "135-0061",
+        "fraudScore": 27,
+        "isResidential": false,
+        "isBroadcast": true,
+        "userAgent": "purity-checker/1.0"
+      },
+      "latencies_ms": {
+        "github": 1679.04,
+        "youtube": 1589.06,
+        "cloudflare": null
+      },
+      "average_latency_ms": 1634.05
+    },
+    {
+      "name": "剩余流量：48.54 GB",
+      "type": "vmess",
+      "server": "us.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:09:59.766941000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:09:59.769188000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:09:59.769197000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:09:59.769637000+08:00\" level=info msg=\"Initial configuration complete, total time: 2ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "套餐到期：2026-11-07",
+      "type": "vmess",
+      "server": "us.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:02.552033000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:02.552602000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:02.552610000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:02.552631000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "距离下次重置剩余：10 天",
+      "type": "vmess",
+      "server": "us.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:02.341899000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:02.342052000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:02.342066000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:02.342098000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇨🇦 加拿大",
+      "type": "vmess",
+      "server": "ca.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [Errno 54] Connection reset by peer> | core日志: time=\"2026-03-28T20:10:04.973701000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:04.973845000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:04.973854000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:04.973887000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇩🇪 德国1",
+      "type": "vmess",
+      "server": "85.234.69.181",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [Errno 54] Connection reset by peer> | core日志: time=\"2026-03-28T20:10:05.200538000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:05.200689000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:05.200752000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:05.200779000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇭🇰 香港1 (移动>联通>电信)",
+      "type": "vmess",
+      "server": "hk1.jiedian.stream",
+      "port": 8443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:02.987961000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:02.988175000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:02.988185000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:02.988207000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇯🇵 日本1 (移动>电信>联通)",
+      "type": "vmess",
+      "server": "jp1.cndns.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [Errno 54] Connection reset by peer> | core日志: time=\"2026-03-28T20:10:03.230141000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:03.230309000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:03.230319000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:03.230353000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇯🇵 日本2 (移动>电信>联通)",
+      "type": "vmess",
+      "server": "jp2.cndns.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:03.455309000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:03.455725000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:03.455759000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:03.455801000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇯🇵 日本3 (移动联通>电信)",
+      "type": "vmess",
+      "server": "jp3.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:03.675943000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:03.676774000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:03.676785000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:03.676808000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇰🇷 韩国 (移动>电信>联通)",
+      "type": "vmess",
+      "server": "kr.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:03.883096000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:03.883231000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:03.883239000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:03.883259000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇸🇬 新加坡1 (三网)",
+      "type": "vmess",
+      "server": "sg1.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:04.097938000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:04.098081000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:04.098092000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:04.098124000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇸🇬 新加坡2 (移动联通>电信)",
+      "type": "vmess",
+      "server": "sg2.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:04.328379000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:04.328823000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:04.328913000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:04.328951000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇺🇸 美国1",
+      "type": "vmess",
+      "server": "us1.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:04.532306000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:04.532471000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:04.532481000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:04.532504000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🇺🇸 美国2",
+      "type": "vmess",
+      "server": "us2.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:04.748572000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:04.748749000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:04.748756000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:04.748780000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    },
+    {
+      "name": "🪧 不可用请软件内更新订阅或官网看问题排查",
+      "type": "vmess",
+      "server": "us.jiedian.stream",
+      "port": 443,
+      "status": "error",
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)> | core日志: time=\"2026-03-28T20:10:02.769232000+08:00\" level=info msg=\"Start initial configuration in progress\"\ntime=\"2026-03-28T20:10:02.769369000+08:00\" level=info msg=\"Geodata Loader mode: memconservative\"\ntime=\"2026-03-28T20:10:02.769381000+08:00\" level=info msg=\"Geosite Matcher implementation: succinct\"\ntime=\"2026-03-28T20:10:02.769421000+08:00\" level=info msg=\"Initial configuration complete, total time: 0ms\"",
+      "fraud_score": null,
+      "fraud_bucket": null,
+      "ip_info": null,
+      "latencies_ms": {
+        "github": null,
+        "youtube": null,
+        "cloudflare": null
+      },
+      "average_latency_ms": null
+    }
+  ]
+}
