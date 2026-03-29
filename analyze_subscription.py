@@ -46,7 +46,7 @@ DEFAULT_IPPURE_RETRY_ATTEMPTS = 2
 DEFAULT_LATENCY_RETRY_ATTEMPTS = 1
 DEFAULT_RETRY_DELAY_SECONDS = 1.0
 DEFAULT_SELECTION_SETTLE_SECONDS = 0.25
-DEFAULT_RANK_LATENCY_THRESHOLD_MS = 1000.0
+
 DEFAULT_SMALL_GROUP_THRESHOLD = 5
 RUNTIME_PROXY_GROUP_NAME = "__purity_auto__"
 SMALL_REGION_GROUP_KEY = "__small_regions__"
@@ -298,20 +298,10 @@ def parse_args() -> argparse.Namespace:
         help="结果 JSON 输出路径，默认: purity_results.json",
     )
     parser.add_argument(
-        "--ranking-output",
-        help="排名 JSON 输出路径；不传则自动生成 *_ranking.json",
-    )
-    parser.add_argument(
         "--workers",
         type=int,
         default=max(2, min(6, (os.cpu_count() or 4) // 2)),
         help="并发测试数，默认按 CPU 自动计算",
-    )
-    parser.add_argument(
-        "--top",
-        type=int,
-        default=10,
-        help="终端输出前 N 个最优节点，默认: 10",
     )
     parser.add_argument(
         "--core-binary",
@@ -334,12 +324,6 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=DEFAULT_IPPURE_TIMEOUT,
         help="IPPure 请求超时时间（秒），默认: 25",
-    )
-    parser.add_argument(
-        "--rank-latency-threshold-ms",
-        type=float,
-        default=DEFAULT_RANK_LATENCY_THRESHOLD_MS,
-        help="平均延迟高于该阈值的节点不参与排名，默认: 1000",
     )
     parser.add_argument(
         "--groups",
@@ -1232,145 +1216,96 @@ def run_single_proxy_test(
         )
 
 
-def is_rank_eligible(result: NodeResult, threshold_ms: float) -> bool:
-    return result.average_latency_ms is not None and result.average_latency_ms <= threshold_ms
+def _fmt_ms(val: float | None) -> str:
+    return f"{val:.0f}ms" if val is not None else "-"
 
 
-def split_ranked_results(
-    results: list[NodeResult],
-    threshold_ms: float,
-) -> tuple[list[NodeResult], list[NodeResult]]:
-    ranked = [item for item in results if is_rank_eligible(item, threshold_ms)]
-    excluded = [item for item in results if not is_rank_eligible(item, threshold_ms)]
-    ranked.sort(key=lambda item: item.ranking_key())
-    excluded.sort(key=lambda item: (item.average_latency_ms if item.average_latency_ms is not None else math.inf, item.name))
-    return ranked, excluded
+def _fmt_score(val: int | None) -> str:
+    return str(val) if val is not None else "-"
 
 
-def simplify_result(item: NodeResult, threshold_ms: float, rank: int | None = None) -> dict[str, Any]:
-    ip_info = item.ip_info or {}
-    result = {
+def _rank_comprehensive(results: list[NodeResult]) -> list[NodeResult]:
+    return sorted(results, key=lambda r: r.ranking_key())
+
+
+def _rank_by_latency(results: list[NodeResult]) -> list[NodeResult]:
+    return sorted(
+        results,
+        key=lambda r: (
+            r.average_latency_ms if r.average_latency_ms is not None else math.inf,
+            r.name,
+        ),
+    )
+
+
+def print_ranked_results(results: list[NodeResult]) -> None:
+    ok_count = sum(1 for r in results if r.status == "ok")
+    partial_count = sum(1 for r in results if r.status == "partial")
+    fail_count = sum(1 for r in results if r.status == "error")
+    print(f"\n共 {len(results)} 个节点  |  成功 {ok_count}  部分 {partial_count}  失败 {fail_count}")
+
+    comprehensive = _rank_comprehensive(results)
+    print("\n" + "=" * 70)
+    print(" 综合排名（纯净度优先，延迟次之）")
+    print("=" * 70)
+    print(f" {'#':>3}  {'节点':<30} {'状态':<6} {'纯净':>4} {'延迟':>8}")
+    print("-" * 70)
+    for i, r in enumerate(comprehensive, 1):
+        status = "OK" if r.status == "ok" else "部分" if r.status == "partial" else "失败"
+        print(f" {i:>3}  {r.name:<30} {status:<6} {_fmt_score(r.fraud_score):>4} {_fmt_ms(r.average_latency_ms):>8}")
+
+    by_latency = _rank_by_latency(results)
+    print("\n" + "=" * 70)
+    print(" 延迟排名（速度优先）")
+    print("=" * 70)
+    print(f" {'#':>3}  {'节点':<30} {'状态':<6} {'延迟':>8} {'纯净':>4}")
+    print("-" * 70)
+    for i, r in enumerate(by_latency, 1):
+        status = "OK" if r.status == "ok" else "部分" if r.status == "partial" else "失败"
+        print(f" {i:>3}  {r.name:<30} {status:<6} {_fmt_ms(r.average_latency_ms):>8} {_fmt_score(r.fraud_score):>4}")
+
+
+def _serialize_node(item: NodeResult, rank: int) -> dict[str, Any]:
+    return {
         "rank": rank,
         "name": item.name,
         "status": item.status,
         "fraudScore": item.fraud_score,
-        "fraudBucket": item.fraud_bucket,
-        "averageLatencyMs": item.average_latency_ms,
-        "githubMs": item.latencies_ms.get("github"),
-        "youtubeMs": item.latencies_ms.get("youtube"),
-        "cloudflareMs": item.latencies_ms.get("cloudflare"),
-        "countryCode": ip_info.get("countryCode"),
-        "country": ip_info.get("country"),
-        "city": ip_info.get("city"),
-        "ip": ip_info.get("ip"),
-        "organization": ip_info.get("asOrganization"),
-        "eligibleForRanking": is_rank_eligible(item, threshold_ms),
+        "avgLatencyMs": item.average_latency_ms,
+        "github": item.latencies_ms.get("github"),
+        "youtube": item.latencies_ms.get("youtube"),
+        "cloudflare": item.latencies_ms.get("cloudflare"),
+        "ip": (item.ip_info or {}).get("ip"),
+        "country": (item.ip_info or {}).get("country"),
         "error": item.error,
     }
-    if rank is None:
-        result.pop("rank")
-    return result
-
-
-def print_ranked_results(results: list[NodeResult], top_n: int, threshold_ms: float) -> None:
-    ranked, excluded = split_ranked_results(results, threshold_ms)
-    print(f"\nTop 节点结果: 仅统计平均延迟 <= {threshold_ms:.0f} ms 的节点")
-    if not ranked:
-        print("没有符合排名条件的节点。")
-        if excluded:
-            print(f"共有 {len(excluded)} 个节点因延迟过高或无延迟数据而未参与排名。")
-        return
-    for index, result in enumerate(ranked[:top_n], start=1):
-        latency = (
-            f"{result.average_latency_ms:.2f} ms"
-            if result.average_latency_ms is not None
-            else "N/A"
-        )
-        score = result.fraud_score if result.fraud_score is not None else "N/A"
-        bucket = result.fraud_bucket if result.fraud_bucket is not None else "N/A"
-        print(
-            f"{index:>2}. {result.name} | 状态={result.status} | fraudScore={score} | 档位={bucket} | 平均延迟={latency}"
-        )
-    if excluded:
-        print(f"\n未参与排名的节点数: {len(excluded)}")
 
 
 def serialize_results(
     source: str,
-    core_binary: str,
     results: list[NodeResult],
-    args: argparse.Namespace,
     total_targets: int,
-    skipped: list[str],
-    selected_groups: list[str],
-    phase: str,
 ) -> dict[str, Any]:
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    ranked, excluded = split_ranked_results(results, args.rank_latency_threshold_ms)
-    serialized_results = [
-        simplify_result(item, args.rank_latency_threshold_ms)
-        for item in ranked + excluded
-    ]
+    ok = sum(1 for r in results if r.status == "ok")
+    partial = sum(1 for r in results if r.status == "partial")
+    failed = sum(1 for r in results if r.status == "error")
+    comprehensive = _rank_comprehensive(results)
+    by_latency = _rank_by_latency(results)
     return {
-        "phase": phase,
-        "generatedAt": timestamp,
+        "generatedAt": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "source": source,
-        "summary": {
-            "total": total_targets,
-            "tested": len(results),
-            "pending": max(0, total_targets - len(results)),
-            "success": sum(1 for item in results if item.status == "ok"),
-            "partial": sum(1 for item in results if item.status == "partial"),
-            "failed": sum(1 for item in results if item.status == "error"),
-            "rankedCount": len(ranked),
-            "excludedFromRankingCount": len(excluded),
-            "rankLatencyThresholdMs": args.rank_latency_threshold_ms,
-            "skippedMetadata": skipped,
-            "selectedGroups": selected_groups,
-        },
-        "results": serialized_results,
+        "total": total_targets,
+        "tested": len(results),
+        "ok": ok,
+        "partial": partial,
+        "failed": failed,
+        "comprehensiveRanking": [
+            _serialize_node(r, i) for i, r in enumerate(comprehensive, 1)
+        ],
+        "latencyRanking": [
+            _serialize_node(r, i) for i, r in enumerate(by_latency, 1)
+        ],
     }
-
-
-def serialize_ranking(
-    source: str,
-    core_binary: str,
-    results: list[NodeResult],
-    args: argparse.Namespace,
-    total_targets: int,
-    skipped: list[str],
-    selected_groups: list[str],
-    phase: str,
-) -> dict[str, Any]:
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    ranked, excluded = split_ranked_results(results, args.rank_latency_threshold_ms)
-    ranking_records = [
-        simplify_result(item, args.rank_latency_threshold_ms, rank=index)
-        for index, item in enumerate(ranked, start=1)
-    ]
-    return {
-        "phase": phase,
-        "generatedAt": timestamp,
-        "source": source,
-        "summary": {
-            "total": total_targets,
-            "tested": len(results),
-            "pending": max(0, total_targets - len(results)),
-            "rankedCount": len(ranked),
-            "excludedFromRankingCount": len(excluded),
-            "rankLatencyThresholdMs": args.rank_latency_threshold_ms,
-            "skippedMetadata": skipped,
-            "selectedGroups": selected_groups,
-        },
-        "results": ranking_records,
-    }
-
-
-def resolve_ranking_output_path(output_path: pathlib.Path, explicit: str | None) -> pathlib.Path:
-    if explicit:
-        return pathlib.Path(explicit).expanduser().resolve()
-    suffix = output_path.suffix or ".json"
-    return output_path.with_name(f"{output_path.stem}_ranking{suffix}")
 
 
 def main() -> int:
@@ -1394,7 +1329,6 @@ def main() -> int:
         raise PurityError("所选分组中没有可测试节点。")
     core_binary = detect_core_binary(args.core_binary)
     output_path = pathlib.Path(args.output).expanduser().resolve()
-    ranking_output_path = resolve_ranking_output_path(output_path, args.ranking_output)
     runtime_config = build_runtime_config(
         data,
         selected_proxies,
@@ -1408,7 +1342,6 @@ def main() -> int:
         print(f"已自动跳过 {len(skipped)} 个提示类节点。")
     print(f"已选择 {len(selected_region_groups)} 个分组，共 {len(selected_proxies)} 个节点。")
     print(f"当前测试分组: {'、'.join(selected_group_labels)}")
-    print(f"排名仅统计平均延迟 <= {args.rank_latency_threshold_ms:.0f} ms 的节点。")
     print("开始测试...")
 
     results: list[NodeResult] = []
@@ -1429,38 +1362,14 @@ def main() -> int:
             marker = "OK" if result.status == "ok" else "WARN" if result.status == "partial" else "ERR"
             print(f"[{completed}/{len(selected_proxies)}] {marker} {result.name}")
 
-            snapshot = serialize_results(
-                source,
-                core_binary,
-                results,
-                args,
-                total_targets=len(selected_proxies),
-                skipped=skipped,
-                selected_groups=selected_group_labels,
-                phase="running" if completed < len(selected_proxies) else "completed",
-            )
+            snapshot = serialize_results(source, results, len(selected_proxies))
             output_path.write_text(
                 json.dumps(snapshot, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            ranking_snapshot = serialize_ranking(
-                source,
-                core_binary,
-                results,
-                args,
-                total_targets=len(selected_proxies),
-                skipped=skipped,
-                selected_groups=selected_group_labels,
-                phase="running" if completed < len(selected_proxies) else "completed",
-            )
-            ranking_output_path.write_text(
-                json.dumps(ranking_snapshot, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
 
-    print_ranked_results(results, args.top, args.rank_latency_threshold_ms)
-    print(f"\n完整结果已保存至: {output_path}")
-    print(f"排名结果已保存至: {ranking_output_path}")
+    print_ranked_results(results)
+    print(f"\n结果已保存至: {output_path}")
     return 0
 
 
