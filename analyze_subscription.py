@@ -1136,25 +1136,22 @@ def run_single_proxy_test(
         if selection_settle_seconds > 0:
             time.sleep(selection_settle_seconds)
 
-        try:
-            ip_body, _ = request_via_proxy_with_retry(
-                IPPURE_URL,
-                runtime.mixed_port,
-                ippure_timeout,
-                attempts=DEFAULT_IPPURE_RETRY_ATTEMPTS,
-            )
-            ip_info = json.loads(ip_body.decode("utf-8"))
-        except Exception as exc:
-            ip_error = str(exc)
+        def _fetch_ippure() -> tuple[dict[str, Any] | None, str | None]:
+            try:
+                body, _ = request_via_proxy_with_retry(
+                    IPPURE_URL,
+                    runtime.mixed_port,
+                    ippure_timeout,
+                    attempts=DEFAULT_IPPURE_RETRY_ATTEMPTS,
+                )
+                return json.loads(body.decode("utf-8")), None
+            except Exception as exc:
+                return None, str(exc)
 
-        score = None
-        if ip_info is not None:
-            score = ip_info.get("fraudScore")
-            score = int(score) if score is not None else None
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(TEST_URLS)) as latency_executor:
-            future_map = {
-                latency_executor.submit(
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1 + len(TEST_URLS)) as pool:
+            ippure_future = pool.submit(_fetch_ippure)
+            latency_futures = {
+                pool.submit(
                     measure_latency_target,
                     label,
                     url,
@@ -1163,10 +1160,16 @@ def run_single_proxy_test(
                 ): label
                 for label, url in TEST_URLS.items()
             }
-            for future in concurrent.futures.as_completed(future_map):
+            ip_info, ip_error = ippure_future.result()
+            for future in concurrent.futures.as_completed(latency_futures):
                 label, latency, error = future.result()
                 latencies_ms[label] = latency
                 latency_errors[label] = error
+
+        score = None
+        if ip_info is not None:
+            score = ip_info.get("fraudScore")
+            score = int(score) if score is not None else None
 
         success_count = sum(1 for value in latencies_ms.values() if value is not None)
         status = "ok" if ip_info is not None and success_count > 0 else "partial" if ip_info is not None or success_count > 0 else "error"
@@ -1308,6 +1311,11 @@ def serialize_results(
     }
 
 
+def _split_into_chunks(items: list, n: int) -> list[list]:
+    k, m = divmod(len(items), n)
+    return [items[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
+
+
 def main() -> int:
     args = parse_args()
     ensure_yaml_dependency()
@@ -1329,12 +1337,7 @@ def main() -> int:
         raise PurityError("所选分组中没有可测试节点。")
     core_binary = detect_core_binary(args.core_binary)
     output_path = pathlib.Path(args.output).expanduser().resolve()
-    runtime_config = build_runtime_config(
-        data,
-        selected_proxies,
-        mixed_port=reserve_port(),
-        controller_port=reserve_port(),
-    )
+    num_workers = min(args.workers, len(selected_proxies))
 
     print(f"加载到 {len(proxies)} 个真实节点。")
     print(f"使用代理内核: {core_binary}")
@@ -1342,31 +1345,52 @@ def main() -> int:
         print(f"已自动跳过 {len(skipped)} 个提示类节点。")
     print(f"已选择 {len(selected_region_groups)} 个分组，共 {len(selected_proxies)} 个节点。")
     print(f"当前测试分组: {'、'.join(selected_group_labels)}")
-    print("开始测试...")
+    print(f"开始测试（{num_workers} 个并行 worker）...")
 
     results: list[NodeResult] = []
-    with MihomoRuntime(
-        core_binary=core_binary,
-        runtime_config=runtime_config,
-        startup_timeout=args.startup_timeout,
-        keep_temp=args.keep_temp,
-    ) as runtime:
-        for completed, proxy in enumerate(selected_proxies, start=1):
-            result = test_single_proxy(
-                proxy,
-                runtime,
-                args.request_timeout,
-                args.ippure_timeout,
-            )
-            results.append(result)
-            marker = "OK" if result.status == "ok" else "WARN" if result.status == "partial" else "ERR"
-            print(f"[{completed}/{len(selected_proxies)}] {marker} {result.name}")
+    progress_lock = threading.Lock()
+    completed_count = [0]
 
+    def _on_result(result: NodeResult) -> None:
+        with progress_lock:
+            results.append(result)
+            completed_count[0] += 1
+            marker = "OK" if result.status == "ok" else "WARN" if result.status == "partial" else "ERR"
+            print(f"[{completed_count[0]}/{len(selected_proxies)}] {marker} {result.name}")
             snapshot = serialize_results(source, results, len(selected_proxies))
             output_path.write_text(
                 json.dumps(snapshot, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+
+    def _worker(chunk: list[dict[str, Any]]) -> None:
+        config = build_runtime_config(
+            data, chunk,
+            mixed_port=reserve_port(),
+            controller_port=reserve_port(),
+        )
+        with MihomoRuntime(
+            core_binary=core_binary,
+            runtime_config=config,
+            startup_timeout=args.startup_timeout,
+            keep_temp=args.keep_temp,
+        ) as runtime:
+            for proxy in chunk:
+                result = test_single_proxy(
+                    proxy, runtime,
+                    args.request_timeout,
+                    args.ippure_timeout,
+                )
+                _on_result(result)
+
+    chunks = _split_into_chunks(selected_proxies, num_workers)
+    if num_workers == 1:
+        _worker(chunks[0])
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = [executor.submit(_worker, chunk) for chunk in chunks]
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
 
     print_ranked_results(results)
     print(f"\n结果已保存至: {output_path}")
