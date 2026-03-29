@@ -1339,6 +1339,7 @@ def main() -> int:
     output_path = pathlib.Path(args.output).expanduser().resolve()
     num_workers = min(args.workers, len(selected_proxies))
 
+    print("⚠️  提示：请确保已关闭系统 TUN 模式代理，否则测试流量会被劫持，导致延迟偏高或连接失败。")
     print(f"加载到 {len(proxies)} 个真实节点。")
     print(f"使用代理内核: {core_binary}")
     if skipped:
