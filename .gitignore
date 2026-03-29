@@ -49,6 +49,10 @@ purity_results_ranking.json
 *_results_ranking.json
 proxyinfo_test.json
 
+# Local proxy config files (may contain subscription tokens)
+*.yaml
+!environment.yml
+
 # Local debug / smoke files
 *.log
 *_smoke.json
