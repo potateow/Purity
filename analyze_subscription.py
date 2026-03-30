@@ -19,6 +19,7 @@ import sys
 import tempfile
 import threading
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -1227,6 +1228,51 @@ def _fmt_score(val: int | None) -> str:
     return str(val) if val is not None else "-"
 
 
+def _char_display_width(ch: str) -> int:
+    codepoint = ord(ch)
+    if ch in {"\u200d", "\ufe0f"}:
+        return 0
+    if 0x1F1E6 <= codepoint <= 0x1F1FF:
+        return 1
+    if unicodedata.combining(ch):
+        return 0
+    if unicodedata.category(ch) in {"Cf", "Mn", "Me"}:
+        return 0
+    return 2 if unicodedata.east_asian_width(ch) in {"W", "F"} else 1
+
+
+def _display_width(text: str) -> int:
+    return sum(_char_display_width(ch) for ch in text)
+
+
+def _truncate_display(text: str, max_width: int) -> str:
+    if max_width <= 0:
+        return ""
+    if _display_width(text) <= max_width:
+        return text
+    if max_width <= 3:
+        return "." * max_width
+
+    truncated: list[str] = []
+    used_width = 0
+    remaining_width = max_width - 3
+    for ch in text:
+        ch_width = _char_display_width(ch)
+        if used_width + ch_width > remaining_width:
+            break
+        truncated.append(ch)
+        used_width += ch_width
+    return "".join(truncated) + "..."
+
+
+def _display_justify(text: str, width: int, *, align: str = "left") -> str:
+    rendered = _truncate_display(text, width)
+    padding = max(0, width - _display_width(rendered))
+    if align == "right":
+        return (" " * padding) + rendered
+    return rendered + (" " * padding)
+
+
 def _rank_comprehensive(results: list[NodeResult]) -> list[NodeResult]:
     return sorted(results, key=lambda r: r.ranking_key())
 
@@ -1247,25 +1293,57 @@ def print_ranked_results(results: list[NodeResult]) -> None:
     fail_count = sum(1 for r in results if r.status == "error")
     print(f"\n共 {len(results)} 个节点  |  成功 {ok_count}  部分 {partial_count}  失败 {fail_count}")
 
+    name_col_width = 30
+    if results:
+        name_col_width = min(40, max(30, max(_display_width(r.name) for r in results)))
+
     comprehensive = _rank_comprehensive(results)
-    print("\n" + "=" * 70)
+    comprehensive_header = (
+        f" {_display_justify('#', 3, align='right')}  "
+        f"{_display_justify('节点', name_col_width)} "
+        f"{_display_justify('状态', 6)} "
+        f"{_display_justify('纯净', 4, align='right')} "
+        f"{_display_justify('延迟', 8, align='right')}"
+    )
+    comprehensive_width = _display_width(comprehensive_header)
+    print("\n" + "=" * comprehensive_width)
     print(" 综合排名（纯净度优先，延迟次之）")
-    print("=" * 70)
-    print(f" {'#':>3}  {'节点':<30} {'状态':<6} {'纯净':>4} {'延迟':>8}")
-    print("-" * 70)
+    print("=" * comprehensive_width)
+    print(comprehensive_header)
+    print("-" * comprehensive_width)
     for i, r in enumerate(comprehensive, 1):
         status = "OK" if r.status == "ok" else "部分" if r.status == "partial" else "失败"
-        print(f" {i:>3}  {r.name:<30} {status:<6} {_fmt_score(r.fraud_score):>4} {_fmt_ms(r.average_latency_ms):>8}")
+        print(
+            f" {_display_justify(str(i), 3, align='right')}  "
+            f"{_display_justify(r.name, name_col_width)} "
+            f"{_display_justify(status, 6)} "
+            f"{_display_justify(_fmt_score(r.fraud_score), 4, align='right')} "
+            f"{_display_justify(_fmt_ms(r.average_latency_ms), 8, align='right')}"
+        )
 
     by_latency = _rank_by_latency(results)
-    print("\n" + "=" * 70)
+    latency_header = (
+        f" {_display_justify('#', 3, align='right')}  "
+        f"{_display_justify('节点', name_col_width)} "
+        f"{_display_justify('状态', 6)} "
+        f"{_display_justify('延迟', 8, align='right')} "
+        f"{_display_justify('纯净', 4, align='right')}"
+    )
+    latency_width = _display_width(latency_header)
+    print("\n" + "=" * latency_width)
     print(" 延迟排名（速度优先）")
-    print("=" * 70)
-    print(f" {'#':>3}  {'节点':<30} {'状态':<6} {'延迟':>8} {'纯净':>4}")
-    print("-" * 70)
+    print("=" * latency_width)
+    print(latency_header)
+    print("-" * latency_width)
     for i, r in enumerate(by_latency, 1):
         status = "OK" if r.status == "ok" else "部分" if r.status == "partial" else "失败"
-        print(f" {i:>3}  {r.name:<30} {status:<6} {_fmt_ms(r.average_latency_ms):>8} {_fmt_score(r.fraud_score):>4}")
+        print(
+            f" {_display_justify(str(i), 3, align='right')}  "
+            f"{_display_justify(r.name, name_col_width)} "
+            f"{_display_justify(status, 6)} "
+            f"{_display_justify(_fmt_ms(r.average_latency_ms), 8, align='right')} "
+            f"{_display_justify(_fmt_score(r.fraud_score), 4, align='right')}"
+        )
 
 
 def _serialize_node(item: NodeResult, rank: int) -> dict[str, Any]:
