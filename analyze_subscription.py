@@ -32,9 +32,13 @@ except ModuleNotFoundError:
     yaml = None
 
 
+PRIMARY_TEST_URL_KEY = "chatgpt"
+PRIMARY_TEST_URL_LABEL = "ChatGPT"
 TEST_URLS = {
-    "github": "https://github.com/robots.txt",
+    PRIMARY_TEST_URL_KEY: "https://chatgpt.com/cdn-cgi/trace",
+    "google": "https://www.google.com/generate_204",
     "youtube": "https://www.youtube.com/generate_204",
+    "github": "https://github.com/robots.txt",
     "cloudflare": "https://www.cloudflare.com/cdn-cgi/trace",
 }
 
@@ -44,7 +48,7 @@ DEFAULT_TIMEOUT = 15.0
 DEFAULT_IPPURE_TIMEOUT = 25.0
 DEFAULT_RETRY_ATTEMPTS = 2
 DEFAULT_IPPURE_RETRY_ATTEMPTS = 2
-DEFAULT_LATENCY_RETRY_ATTEMPTS = 1
+DEFAULT_LATENCY_SAMPLES = 3
 DEFAULT_RETRY_DELAY_SECONDS = 1.0
 DEFAULT_SELECTION_SETTLE_SECONDS = 0.25
 
@@ -79,6 +83,7 @@ COUNTRY_CODE_REGION_LABELS = {
     "IT": "意大利",
     "JP": "日本",
     "KR": "韩国",
+    "MD": "摩尔多瓦",
     "MO": "澳门",
     "MY": "马来西亚",
     "NL": "荷兰",
@@ -119,6 +124,7 @@ REGION_KEYWORDS = (
     ("意大利", ("意大利", "italy")),
     ("瑞士", ("瑞士", "switzerland")),
     ("中国", ("中国", "china", "大陆", "内地")),
+    ("摩尔多瓦", ("摩尔多瓦", "moldova")),
 )
 SERVER_TOKEN_REGION_LABELS = {
     "ar": "阿根廷",
@@ -137,6 +143,7 @@ SERVER_TOKEN_REGION_LABELS = {
     "it": "意大利",
     "jp": "日本",
     "kr": "韩国",
+    "md": "摩尔多瓦",
     "mo": "澳门",
     "my": "马来西亚",
     "nl": "荷兰",
@@ -172,11 +179,13 @@ class NodeResult:
     latency_errors: dict[str, str | None]
     average_latency_ms: float | None
 
-    def ranking_key(self) -> tuple[float, float, float, str]:
+    def ranking_key(self) -> tuple[float, float, float, float, str]:
         bucket = self.fraud_bucket if self.fraud_bucket is not None else math.inf
+        primary_latency = self.latencies_ms.get(PRIMARY_TEST_URL_KEY)
+        primary_penalty = 0.0 if primary_latency is not None else 1.0
         latency = self.average_latency_ms if self.average_latency_ms is not None else math.inf
         raw_score = self.fraud_score if self.fraud_score is not None else math.inf
-        return (bucket, latency, raw_score, self.name)
+        return (bucket, primary_penalty, latency, raw_score, self.name)
 
 
 @dataclass
@@ -301,8 +310,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--workers",
         type=int,
-        default=max(2, min(6, (os.cpu_count() or 4) // 2)),
-        help="并发测试数，默认按 CPU 自动计算",
+        default=max(4, min(12, (os.cpu_count() or 4))),
+        help="并发测试数，默认按 CPU 自动计算（范围 4~12）",
     )
     parser.add_argument(
         "--core-binary",
@@ -1037,18 +1046,20 @@ def measure_latency_target(
     url: str,
     proxy_port: int,
     timeout: float,
+    samples: int = DEFAULT_LATENCY_SAMPLES,
 ) -> tuple[str, float | None, str | None]:
-    try:
-        _, elapsed_ms = request_via_proxy_with_retry(
-            url,
-            proxy_port,
-            timeout,
-            attempts=DEFAULT_LATENCY_RETRY_ATTEMPTS,
-            read_limit=1,
-        )
-        return label, round(elapsed_ms, 2), None
-    except Exception as exc:
-        return label, None, str(exc)
+    readings: list[float] = []
+    last_error: str | None = None
+    for _ in range(max(1, samples)):
+        try:
+            _, elapsed_ms = request_via_proxy(url, proxy_port, timeout, read_limit=1)
+            readings.append(elapsed_ms)
+        except Exception as exc:
+            last_error = str(exc)
+    if not readings:
+        return label, None, last_error
+    median_ms = statistics.median(readings)
+    return label, round(median_ms, 2), None
 
 
 def fraud_bucket(score: int | None) -> int | None:
@@ -1281,6 +1292,7 @@ def _rank_by_latency(results: list[NodeResult]) -> list[NodeResult]:
     return sorted(
         results,
         key=lambda r: (
+            0 if r.latencies_ms.get(PRIMARY_TEST_URL_KEY) is not None else 1,
             r.average_latency_ms if r.average_latency_ms is not None else math.inf,
             r.name,
         ),
@@ -1295,7 +1307,11 @@ def print_ranked_results(results: list[NodeResult]) -> None:
 
     name_col_width = 30
     if results:
-        name_col_width = min(40, max(30, max(_display_width(r.name) for r in results)))
+        max_name_width = max(_display_width(r.name) for r in results)
+        terminal_width = shutil.get_terminal_size(fallback=(120, 24)).columns
+        # 预留其余列和分隔符，避免节点名过长导致整行折行
+        available_for_name = max(18, terminal_width - 37)
+        name_col_width = min(40, max(18, min(max_name_width, available_for_name)))
 
     comprehensive = _rank_comprehensive(results)
     comprehensive_header = (
@@ -1303,6 +1319,7 @@ def print_ranked_results(results: list[NodeResult]) -> None:
         f"{_display_justify('节点', name_col_width)} "
         f"{_display_justify('状态', 6)} "
         f"{_display_justify('纯净', 4, align='right')} "
+        f"{_display_justify('ChatGPT', 7, align='right')} "
         f"{_display_justify('延迟', 8, align='right')}"
     )
     comprehensive_width = _display_width(comprehensive_header)
@@ -1318,6 +1335,7 @@ def print_ranked_results(results: list[NodeResult]) -> None:
             f"{_display_justify(r.name, name_col_width)} "
             f"{_display_justify(status, 6)} "
             f"{_display_justify(_fmt_score(r.fraud_score), 4, align='right')} "
+            f"{_display_justify(_fmt_ms(r.latencies_ms.get(PRIMARY_TEST_URL_KEY)), 7, align='right')} "
             f"{_display_justify(_fmt_ms(r.average_latency_ms), 8, align='right')}"
         )
 
@@ -1327,6 +1345,7 @@ def print_ranked_results(results: list[NodeResult]) -> None:
         f"{_display_justify('节点', name_col_width)} "
         f"{_display_justify('状态', 6)} "
         f"{_display_justify('延迟', 8, align='right')} "
+        f"{_display_justify('ChatGPT', 7, align='right')} "
         f"{_display_justify('纯净', 4, align='right')}"
     )
     latency_width = _display_width(latency_header)
@@ -1342,6 +1361,7 @@ def print_ranked_results(results: list[NodeResult]) -> None:
             f"{_display_justify(r.name, name_col_width)} "
             f"{_display_justify(status, 6)} "
             f"{_display_justify(_fmt_ms(r.average_latency_ms), 8, align='right')} "
+            f"{_display_justify(_fmt_ms(r.latencies_ms.get(PRIMARY_TEST_URL_KEY)), 7, align='right')} "
             f"{_display_justify(_fmt_score(r.fraud_score), 4, align='right')}"
         )
 
@@ -1353,8 +1373,10 @@ def _serialize_node(item: NodeResult, rank: int) -> dict[str, Any]:
         "status": item.status,
         "fraudScore": item.fraud_score,
         "avgLatencyMs": item.average_latency_ms,
-        "github": item.latencies_ms.get("github"),
+        "chatgpt": item.latencies_ms.get("chatgpt"),
+        "google": item.latencies_ms.get("google"),
         "youtube": item.latencies_ms.get("youtube"),
+        "github": item.latencies_ms.get("github"),
         "cloudflare": item.latencies_ms.get("cloudflare"),
         "ip": (item.ip_info or {}).get("ip"),
         "country": (item.ip_info or {}).get("country"),
